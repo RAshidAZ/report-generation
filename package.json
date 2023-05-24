@@ -1,0 +1,25 @@
+{
+  "name": "tdmm-report-generator",
+  "version": "1.0.0",
+  "description": "Generate report for TDMM",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RAshidAZ/report-generation.git"
+  },
+  "keywords": [
+    "tdmm",
+    "report",
+    "cex",
+    "exchange"
+  ],
+  "author": "ITH",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RAshidAZ/report-generation/issues"
+  },
+  "homepage": "https://github.com/RAshidAZ/report-generation#readme"
+}
