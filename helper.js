@@ -52,6 +52,10 @@ const url = 'mongodb://localhost:27017/';
 const client = new MongoClient(url);
 const Transactions = client.db('transactions')
 
+/**
+ * This function attempts to connect to a MongoDB database and retries every 5 seconds if it fails.
+ * @returns {Promise} The function `connectWithRetry` is returning a Promise object.
+ */
 const connectWithRetry = function () {
     return new Promise((resolve, reject) => {
         client.connect(async function (err) {
@@ -65,10 +69,19 @@ const connectWithRetry = function () {
         })
     })
 }
-connectWithRetry();
 
-
-
+/**
+ * The function processes report data by saving transactions in MongoDB, creating Excel data, saving
+ * Excel locally, and executing a callback function.
+ * @param {JSON} data - The data parameter is the input data that needs to be processed. It could be an
+ * object, an array, or any other data type that the functions in the waterfallFunctions array can
+ * handle.
+ * @param response - It is optional and can be replaced with the cb parameter
+ * if it is not provided.
+ * @param cb - cb stands for "callback" and is a function that will be called once all the asynchronous
+ * functions in the waterfall have completed. It is an optional parameter, and if it is not provided,
+ * the response parameter will be used as the callback function.
+ */
 const processReportData = function (data, response, cb) {
     if (!cb) {
         cb = response;
@@ -82,6 +95,14 @@ const processReportData = function (data, response, cb) {
 }
 exports.processReportData = processReportData
 
+/**
+ * The function saves transactions data in MongoDB and returns a response.
+ * @param {JSON} data
+ * @param response - The response parameter is a callback function that will be called with the result
+ * of the saveTransactionsInMongoDB function. It is optional and can be replaced with the cb parameter
+ * if it is not provided.
+ * @param cb
+ */
 const saveTransactionsInMongoDB = (data, response, cb) => {
     if (!cb) {
         cb = response;
@@ -98,6 +119,14 @@ const saveTransactionsInMongoDB = (data, response, cb) => {
     })
 }
 
+/**
+ * The function creates an Excel sheet with data from an input object, organized by strategy type.
+ * @param data - The data object containing the transaction details.
+ * @param response
+ * @param cb
+ * @returns a callback function with either an error or a success response object containing a status
+ * code, message, function name, an Excel workbook object, and a null value.
+ */
 const createExcelData = async function (data, response, cb) {
     if (!cb) {
         cb = response;
@@ -185,6 +214,14 @@ const createExcelData = async function (data, response, cb) {
 
 }
 
+/**
+ * This function saves an Excel workbook locally in a specified folder with a given file name.
+ * @param data - An object containing information about the report path and file name.
+ * @param response 
+ * @param cb
+ * @returns a Promise that resolves with the result of the `cb` function call, which is an object with
+ * a status code, a message, a function name, and some additional data.
+ */
 const saveExcelLocally = async function (data, response, cb) {
     if (!cb) {
         cb = response;
@@ -201,5 +238,4 @@ const saveExcelLocally = async function (data, response, cb) {
 }
 
 
-
-
+connectWithRetry();
