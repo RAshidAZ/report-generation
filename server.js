@@ -28,14 +28,26 @@ app.post('/report', function (req, res) {
 })
 
 //TODO
-// app.get('/download/report', function (req, res) {
-//     let filePath = path.join(__dirname, "../../../")
-//     let fileName = "rejson.Linux-ubuntu18.04-x86_64.2.0.11.zip"
-//     res.setHeader('Content-type', 'application/zip');
-//     res.set('Content-Disposition', `attachment; filename=${fileName}`);
+app.get('/download/report', function (req, res) {
 
-//     res.sendFile(filePath + fileName);
-// })
+    let data = req.query;
+    data.req = req.data;
+    helper.verifyReportQueryAndSend(data, function (err, response) {
+        let status = 0;
+        if (err) {
+            status = err.status;
+            return res.status(status).send(err);
+        }
+        status = response.status;
+
+        const { reportPath, reportName } = response.data
+
+        res.setHeader('Content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.set('Content-Disposition', `attachment; filename=${reportName}`);
+    
+        return res.status(status).sendFile(reportPath);
+    })
+})
 
 app.listen(PORT, (err, res) => {
     if (err) {

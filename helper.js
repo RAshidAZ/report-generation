@@ -238,4 +238,27 @@ const saveExcelLocally = async function (data, response, cb) {
 }
 
 
+const verifyReportQueryAndSend = async function (data, response, cb) {
+    if (!cb) {
+        cb = response;
+    }
+    if (!data.date || !data.exchange || !data.pair) {
+        return cb(sendResponse(400, "Provide all the required field for repoort generatiion!", "verifyReportQueryAndSend", null, null))
+    }
+    let client = `${data.exchange.toUpperCase()}_${data.pair.toUpperCase()}`
+    let reportName = `${client}_${data.date}.xls`
+    let reportPath = `./reports/${client}/${reportName}`
+    if (!fs.existsSync(reportPath)) {
+        return cb(sendResponse(400, "No such report exist, contact teech team for more details!", "verifyReportQueryAndSend", null, null))
+    }
+    let sendRes = {
+        reportPath,
+        reportName
+    }
+    return cb(null, sendResponse(200, "Success", "verifyReportQueryAndSend", sendRes, null))
+}
+exports.verifyReportQueryAndSend = verifyReportQueryAndSend
+
+
+
 connectWithRetry();
