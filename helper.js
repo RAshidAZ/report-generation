@@ -4,50 +4,8 @@ const async = require('async');
 const ExcelJS = require('exceljs');
 const fs = require('fs')
 
-const sendResponse = function (status, message, action, data, signature) {
-    let response = {};
-    switch (status) {
-        case 200: // status = 200
-            response = {
-                action: action,
-                status: status,
-                message: message,
-                data: data,
-                error: false,
-            };
-            break;
-        case 500: // status = 500
-            response = {
-                action: action,
-                status: status,
-                message: message ? message : "Something went wrong",
-                data: data,
-                error: true,
-            };
-            break;
-        case 400: // status = 400
-            response = {
-                signature: signature,
-                action: action,
-                status: status,
-                message: message ? message : "Missing params",
-                data: data,
-                error: true,
-            };
-            break;
-        default:
-            response = {
-                signature: signature,
-                action: action,
-                status: status,
-                message: message,
-                data: data,
-                error: true,
-            };
-    }
-    return response;
-};
-
+const { sendResponse } = require('./services/sendResponse');
+const { sendTelegramMessage } = require('./services/telegramBot');
 const url = 'mongodb://localhost:27017/';
 const client = new MongoClient(url);
 const Transactions = client.db('transactions')
@@ -86,10 +44,14 @@ const processReportData = function (data, response, cb) {
     if (!cb) {
         cb = response;
     }
+    if (!data.fileName || !data.reportPath || !data.collectionName || !data.tgMessage || !data.data) {
+        return cb(sendResponse(400, "Provide all the required field for report generation!", "processReportData", null, null))
+    }
     let waterFallFunctions = []
     waterFallFunctions.push(async.apply(saveTransactionsInMongoDB, data))
     waterFallFunctions.push(async.apply(createExcelData, data))
     waterFallFunctions.push(async.apply(saveExcelLocally, data))
+    waterFallFunctions.push(async.apply(sendTelegramMessage, data))
     async.waterfall(waterFallFunctions, cb)
 
 }
@@ -111,8 +73,12 @@ const saveTransactionsInMongoDB = (data, response, cb) => {
     console.log(collectionName)
     const collection = Transactions.collection(collectionName);
     let insertArray = data.data
+    if (!insertArray.length) {
+        return cb(null, sendResponse(200, "Success", "saveTransactionsInMongoDB", null, null))
+    }
     collection.insertMany(insertArray, (err, res) => {
         if (err) {
+            console.log(err)
             return cb(sendResponse(500, "Something went wrong", "saveTransactionsInMongoDB", err, null))
         }
         return cb(null, sendResponse(200, "Success", "saveTransactionsInMongoDB", res, null))
@@ -151,17 +117,17 @@ const createExcelData = async function (data, response, cb) {
             "orderId": order.orderId,
             "createdAt": order.createdAt,
             "symbol": order.clientDetails?.token + "_" + order.clientDetails?.baseToken,
-            "fillPrice": order.fillPrice,
-            "fillQuantity": order.fillQuantity,
-            "price": order.price,
-            "quantity": order.quantity,
+            "fillPrice": order.fillPrice?.["$numberDecimal"],
+            "fillQuantity": order.fillQuantity?.["$numberDecimal"],
+            "price": order.price?.["$numberDecimal"],
+            "quantity": order.quantity?.["$numberDecimal"],
             "status": order.status,
             "strategyType": order.strategyType,
-            "totalPrice": order.totalPrice,
-            "transactionFee": order.transactionFee,
+            "totalPrice": order.totalPrice?.["$numberDecimal"],
+            "transactionFee": order.transactionFee?.["$numberDecimal"],
             "feeType": order.feeType,
             "type": order.type,
-            "accountUsed": order.account ? "Secondary" : "Primary"
+            "accountUsed": order.account?.["$numberDecimal"] ? "Secondary" : "Primary"
         }
 
         strategyObject[order.strategyType].push(objToPush)
@@ -172,13 +138,13 @@ const createExcelData = async function (data, response, cb) {
             { header: "Order Id", key: "orderId", width: 40 },
             { header: "Date", key: "createdAt", width: 30 },
             { header: "Symbol", key: "symbol", width: 15 },
-            { header: "Fill Price", key: "fillPrice", width: 10 },
-            { header: "Fill Amount", key: "fillQuantity", width: 10 },
-            { header: "Price", key: "price", width: 10 },
-            { header: "Amount", key: "quantity", width: 10 },
+            { header: "Fill Price", key: "fillPrice", width: 15 },
+            { header: "Fill Amount", key: "fillQuantity", width: 15 },
+            { header: "Price", key: "price", width: 15 },
+            { header: "Amount", key: "quantity", width: 15 },
             { header: "Status", key: "status", width: 10 },
-            { header: "Strategy Type", key: "strategyType", width: 10 },
-            { header: "Total Price", key: "totalPrice", width: 10 },
+            { header: "Strategy Type", key: "strategyType", width: 15 },
+            { header: "Total Price", key: "totalPrice", width: 20 },
             { header: "Txn Fees", key: "transactionFee", width: 15 },
             { header: "Fee Currency", key: "feeType", width: 10 },
             { header: "Side", key: "type", width: 10 },
@@ -227,7 +193,8 @@ const saveExcelLocally = async function (data, response, cb) {
         cb = response;
     }
     let workbook = response.data
-    let folderName = data.reportPath
+    let folderName = __dirname + data.reportPath
+    console.log(folderName)
     if (!fs.existsSync(folderName)) {
         fs.mkdirSync(folderName, { recursive: true });
     }
@@ -251,20 +218,21 @@ const saveExcelLocally = async function (data, response, cb) {
  * response. If any of the required fields (`date`, `exchange`, `pair`) are missing in the `data`
  * object, it returns an error response with status code 400 and a message "Provide all the required
  * field for report generation!". If the report file does not exist in the specified path, it returns an 
- * error response with status code 400 and a message "No such report exist, contact teech team for more details!".
+ * error response with status code 400 and a message "No such report exist, contact tech team for more details!".
  */
 const verifyReportQueryAndSend = async function (data, response, cb) {
     if (!cb) {
         cb = response;
     }
     if (!data.date || !data.exchange || !data.pair) {
-        return cb(sendResponse(400, "Provide all the required field for repoort generatiion!", "verifyReportQueryAndSend", null, null))
+        return cb(sendResponse(400, "Provide all the required field for report generation!", "verifyReportQueryAndSend", null, null))
     }
     let client = `${data.exchange.toUpperCase()}_${data.pair.toUpperCase()}`
     let reportName = `${client}_${data.date}.xls`
-    let reportPath = `./reports/${client}/${reportName}`
+    let reportPath = __dirname + `/reports/${client}/${reportName}`
+    console.log(reportPath)
     if (!fs.existsSync(reportPath)) {
-        return cb(sendResponse(400, "No such report exist, contact teech team for more details!", "verifyReportQueryAndSend", null, null))
+        return cb(sendResponse(400, "No such report exist, contact tech team for more details!", "verifyReportQueryAndSend", null, null))
     }
     let sendRes = {
         reportPath,

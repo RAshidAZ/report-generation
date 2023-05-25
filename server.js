@@ -3,7 +3,7 @@ const PORT = 8000;
 const express = require('express');
 const app = express();
 
-
+require("./config")
 const helper = require('./helper');
 
 app.use(bodyParser.json({
@@ -14,8 +14,7 @@ app.use(bodyParser.urlencoded({
 }));
 
 app.post('/report', function (req, res) {
-    let data = req.body;
-    data.req = req.data;
+    let data = JSON.parse(req.body?.marketTransaction);
     helper.processReportData(data, function (err, response) {
         let status = 0;
         if (err) {
