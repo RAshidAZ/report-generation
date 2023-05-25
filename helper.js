@@ -238,6 +238,21 @@ const saveExcelLocally = async function (data, response, cb) {
 }
 
 
+/**
+ * The function verifies a report query and sends a response with the report path and name if it
+ * exists, or an error message if it does not.
+ * @param data - An object containing the date, exchange, and pair for the report generation.
+ * @param response - The response object that will be used to send the HTTP response back to the
+ * client.
+ * @param cb - cb stands for "callback function". It is a function that is passed as a parameter to
+ * another function and is called back when the operation is complete. In this case, the callback
+ * function is used to send a response back to the client after verifying the report query.
+ * @returns The function `verifyReportQueryAndSend` is returning either an error response or a success
+ * response. If any of the required fields (`date`, `exchange`, `pair`) are missing in the `data`
+ * object, it returns an error response with status code 400 and a message "Provide all the required
+ * field for report generation!". If the report file does not exist in the specified path, it returns an 
+ * error response with status code 400 and a message "No such report exist, contact teech team for more details!".
+ */
 const verifyReportQueryAndSend = async function (data, response, cb) {
     if (!cb) {
         cb = response;
