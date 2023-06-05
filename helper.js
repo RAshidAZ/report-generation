@@ -87,11 +87,9 @@ const saveTransactionsInMongoDB = (data, response, cb) => {
 }
 
 /**
- * The function saves transactions data in MongoDB and returns a response.
+ * The function saves transactions in archive DB.
  * @param {JSON} data
- * @param response - The response parameter is a callback function that will be called with the result
- * of the saveTransactionsInMongoDB function. It is optional and can be replaced with the cb parameter
- * if it is not provided.
+ * @param response
  * @param cb
  */
 const archiveMarketTransactions = (data, response, cb) => {
