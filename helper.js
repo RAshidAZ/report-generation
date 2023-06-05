@@ -9,6 +9,7 @@ const { sendTelegramMessage } = require('./services/telegramBot');
 const url = 'mongodb://localhost:27017/';
 const client = new MongoClient(url);
 const Transactions = client.db('transactions')
+const Archives = client.db('archives')
 
 /**
  * This function attempts to connect to a MongoDB database and retries every 5 seconds if it fails.
@@ -84,6 +85,34 @@ const saveTransactionsInMongoDB = (data, response, cb) => {
         return cb(null, sendResponse(200, "Success", "saveTransactionsInMongoDB", res, null))
     })
 }
+
+/**
+ * The function saves transactions in archive DB.
+ * @param {JSON} data
+ * @param response
+ * @param cb
+ */
+const archiveMarketTransactions = (data, response, cb) => {
+    if (!cb) {
+        cb = response;
+    }
+    let collectionName = data.collectionName
+    console.log(collectionName)
+    const collection = Archives.collection(collectionName);
+    let insertArray = data.data
+    if (!insertArray.length) {
+        return cb(null, sendResponse(200, "Success", "archiveMarketTransactions", null, null))
+    }
+    collection.insertMany(insertArray, (err, res) => {
+        if (err) {
+            console.log(err)
+            return cb(sendResponse(500, "Something went wrong", "archiveMarketTransactions", err, null))
+        }
+        console.log(res?.insertedCount)
+        return cb(null, sendResponse(200, "Success", "archiveMarketTransactions", null, null))
+    })
+}
+exports.archiveMarketTransactions = archiveMarketTransactions
 
 /**
  * The function creates an Excel sheet with data from an input object, organized by strategy type.

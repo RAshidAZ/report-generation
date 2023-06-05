@@ -26,6 +26,19 @@ app.post('/report', function (req, res) {
     })
 })
 
+app.post('/archive', function (req, res) {
+    let data = JSON.parse(req.body?.marketTransaction);
+    helper.archiveMarketTransactions(data, function (err, response) {
+        let status = 0;
+        if (err) {
+            status = err.status;
+            return res.status(status).send(err);
+        }
+        status = response.status;
+        return res.status(status).send(response);
+    })
+})
+
 //TODO
 app.get('/download/report', function (req, res) {
 
